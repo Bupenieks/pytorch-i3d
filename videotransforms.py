@@ -1,7 +1,7 @@
 import numpy as np
 import numbers
 import random
-
+import math
 class RandomCrop(object):
     """Crop the given video sequences (t x h x w) at a random location.
     Args:
@@ -100,3 +100,21 @@ class RandomHorizontalFlip(object):
 
     def __repr__(self):
         return self.__class__.__name__ + '(p={})'.format(self.p)
+
+
+class Tile(object):
+
+    def __init__(self, num_frames):
+        self.num_frames = num_frames
+
+    def tile(self, img):
+        img = img[-self.num_frames:]
+        num_to_tile = float(self.num_frames) / img.shape[0]
+        img = np.tile(img, [int(math.ceil(num_to_tile)), 1, 1, 1])
+        img = img[:self.num_frames]
+        return img
+
+
+    def __call__(self, img):
+        return self.tile(img)   
+        
