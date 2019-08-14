@@ -1,6 +1,6 @@
 import os
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-#os.environ["CUDA_VISIBLE_DEVICES"]='0,1,2,3'
+#os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
+os.environ["CUDA_VISIBLE_DEVICES"]='1'
 import sys
 import argparse
 
@@ -28,21 +28,24 @@ import numpy as np
 
 from pytorch_i3d import InceptionI3d
 
-from charades_dataset import Charades as Dataset
+#from charades_dataset import Charades as Dataset
+from gunshot_loader import Charades as Dataset
 
 
 def run(init_lr=0.1, max_steps=64e3, mode='rgb', root='/ssd/Charades_v1_rgb', train_split='charades/charades.json', batch_size=8*5, save_model=''):
     # setup dataset
-    train_transforms = transforms.Compose([videotransforms.RandomCrop(224),
+    train_transforms = transforms.Compose([videotransforms.Tile(64),
+                                           videotransforms.RandomCrop(224),
                                            videotransforms.RandomHorizontalFlip(),
     ])
     test_transforms = transforms.Compose([videotransforms.CenterCrop(224)])
 
     dataset = Dataset(train_split, 'training', root, mode, train_transforms)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=36, pin_memory=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 
+    val_split = 
     val_dataset = Dataset(train_split, 'testing', root, mode, test_transforms)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=36, pin_memory=True)    
+    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)    
 
     dataloaders = {'train': dataloader, 'val': val_dataloader}
     datasets = {'train': dataset, 'val': val_dataset}
@@ -55,7 +58,7 @@ def run(init_lr=0.1, max_steps=64e3, mode='rgb', root='/ssd/Charades_v1_rgb', tr
     else:
         i3d = InceptionI3d(400, in_channels=3)
         i3d.load_state_dict(torch.load('models/rgb_imagenet.pt'))
-    i3d.replace_logits(157)
+    i3d.replace_logits(2)
     #i3d.load_state_dict(torch.load('/ssd/models/000920.pt'))
     i3d.cuda()
     i3d = nn.DataParallel(i3d)
@@ -69,8 +72,8 @@ def run(init_lr=0.1, max_steps=64e3, mode='rgb', root='/ssd/Charades_v1_rgb', tr
     steps = 0
     # train it
     while steps < max_steps:#for epoch in range(num_epochs):
-        print 'Step {}/{}'.format(steps, max_steps)
-        print '-' * 10
+        print('Step {}/{}'.format(steps, max_steps))
+        print('-' * 10)
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -89,7 +92,10 @@ def run(init_lr=0.1, max_steps=64e3, mode='rgb', root='/ssd/Charades_v1_rgb', tr
             for data in dataloaders[phase]:
                 num_iter += 1
                 # get the inputs
-                inputs, labels = data
+                try:
+                    inputs, labels = data
+                except:
+                    print("BAD FILE")
 
                 # wrap them in Variable
                 inputs = Variable(inputs.cuda())
@@ -119,15 +125,15 @@ def run(init_lr=0.1, max_steps=64e3, mode='rgb', root='/ssd/Charades_v1_rgb', tr
                     optimizer.zero_grad()
                     lr_sched.step()
                     if steps % 10 == 0:
-                        print '{} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f}'.format(phase, tot_loc_loss/(10*num_steps_per_update), tot_cls_loss/(10*num_steps_per_update), tot_loss/10)
+                        print('{} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f}'.format(phase, tot_loc_loss/(10*num_steps_per_update), tot_cls_loss/(10*num_steps_per_update), tot_loss/10))
                         # save model
                         torch.save(i3d.module.state_dict(), save_model+str(steps).zfill(6)+'.pt')
                         tot_loss = tot_loc_loss = tot_cls_loss = 0.
             if phase == 'val':
-                print '{} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f}'.format(phase, tot_loc_loss/num_iter, tot_cls_loss/num_iter, (tot_loss*num_steps_per_update)/num_iter) 
+                print('{} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f}'.format(phase, tot_loc_loss/num_iter, tot_cls_loss/num_iter, (tot_loss*num_steps_per_update)/num_iter) )
     
 
 
 if __name__ == '__main__':
     # need to add argparse
-    run(mode=args.mode, root=args.root, save_model=args.save_model)
+    run(mode='rgb', root='/data5/ben/gunshots/data/npys', train_split='/data5/ben/gunshots/data/10585train_bin_inp.txt',val_split='/data5/ben/gunshots/data/1500val_inp.txt', batch_size=7)
