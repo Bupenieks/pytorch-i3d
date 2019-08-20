@@ -14,7 +14,6 @@ import cv2
 
 
 def read_npy_file(fname): 
-    print(fname)
     data = np.load(fname)
     return data.astype(np.float32)
 
@@ -44,7 +43,7 @@ def make_dataset(labels_file, split, root):
 
 
 
-class Charades(data_utl.Dataset):
+class VideoLoader(data_utl.Dataset):
     def __init__(self, split_file, split, root, mode, transforms=None, save_dir='', num=0):
         
         self.data = make_dataset(split_file, split, root)
@@ -62,18 +61,19 @@ class Charades(data_utl.Dataset):
         Returns:
             tuple: (image, target) where target is class_index of the target class.
         """
+        try:
+            imgs, label = self.data[index]
+            imgs = read_npy_file(imgs)
+            imgs = self.transforms(imgs)
+            imgs = imgs.transpose([3,0,1,2])
+        
+            label_vec = np.zeros((2, 64), np.float32)
+            label_vec[label,:] = 1
 
-        imgs, label = self.data[index]
-        imgs = read_npy_file(imgs)
-        imgs = self.transforms(imgs)
-        imgs = imgs.transpose([3,0,1,2])
-    
-        print(imgs.shape)
-        label_vec = np.zeros((2, 64), np.float32)
-        label_vec[label,:] = 1
 
-
-        return torch.from_numpy(imgs), torch.from_numpy(label_vec)
+            return torch.from_numpy(imgs), torch.from_numpy(label_vec)
+        except ValueError as e:
+            return None
 
     def __len__(self):
         return len(self.data)
