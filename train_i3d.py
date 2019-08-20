@@ -181,7 +181,6 @@ def run(num_vids, init_lr=0.1, max_steps=64e3, mode='rgb', root='/ssd/Charades_v
             if phase == 'val':
                 print('{} Accuracy: {:.4f} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f}'.format(phase,tot_acc/num_iter, tot_loc_loss/num_iter, tot_cls_loss/num_iter, (tot_loss*num_steps_per_update)/num_iter) )
 
-
 if __name__ == '__main__':
     # need to add argparse
     with open(args.config,'r') as fin:
