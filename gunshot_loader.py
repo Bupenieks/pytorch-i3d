@@ -64,6 +64,10 @@ class VideoLoader(data_utl.Dataset):
         try:
             imgs, label = self.data[index]
             imgs = read_npy_file(imgs)
+    
+            # [1, -1]
+            imgs *= 2
+
             imgs = self.transforms(imgs)
             imgs = imgs.transpose([3,0,1,2])
         

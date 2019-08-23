@@ -13,4 +13,5 @@ CUDA_VISIBLE_DEVICES=$GPUS python -m torch.distributed.launch --nproc_per_node=$
     --name=$1 \
     --ngpu=$NUM_GPUS \
     --config=$CONFIG \
+    --phase="train" \
     |& tee -a $1
